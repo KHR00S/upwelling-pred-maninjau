@@ -1,0 +1,243 @@
+---
+title: "VAR Danau Maninjau"
+author: "peekaboo"
+date: "2024-09-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load and prepare the dataset
+df <- read.delim("~/Downloads/DATA TRAIN.csv", sep = ";")
+
+df$Date <- as.Date(df$Date, format = "%d/%m/%Y")
+
+# Convert TS, PRECTOTCORR, and WS10M to numeric (handle comma decimals)
+df$TS <- as.numeric(gsub(",", ".", df$TS))
+df$PRECTOTCORR <- as.numeric(gsub(",", ".", df$PRECTOTCORR))
+df$WS10M <- as.numeric(gsub(",", ".", df$WS10M))
+
+# Check the first few rows to verify conversion
+head(df)
+
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(forecast)
+
+
+# Simpan nilai minimum dan maksimum sebelum normalisasi untuk TS, PRECTOTCORR, dan WS10M
+min_values <- sapply(df[, c("TS", "PRECTOTCORR", "WS10M")], min)
+max_values <- sapply(df[, c("TS", "PRECTOTCORR", "WS10M")], max)
+
+# Print nilai minimum dan maksimum
+print("Nilai minimum:")
+print(min_values)
+print("Nilai maksimum:")
+print(max_values)
+
+# Fungsi untuk normalisasi menggunakan Min-Max Scaling
+min_max_normalize <- function(x) {
+  return((x - min(x)) / (max(x) - min(x)))
+}
+
+# Lakukan normalisasi pada kolom TS, PRECTOTCORR, dan WS10M
+df_normalized <- df %>%
+  mutate(
+    TS = min_max_normalize(TS),
+    PRECTOTCORR = min_max_normalize(PRECTOTCORR),
+    WS10M = min_max_normalize(WS10M)
+  )
+
+# Print data setelah normalisasi
+head(df_normalized)
+
+# Konversi ke time series dengan frekuensi harian (365 hari dalam setahun)
+data_ts <- ts(df_normalized[, c("TS", "PRECTOTCORR", "WS10M")], start = c(2016, 07, 20), frequency = 365)
+
+# Plot time series dengan autoplot
+autoplot(data_ts, facets = TRUE) +
+  labs(title = "Normalized TS, PRECTOTCORR, and WS10M Time Series", x = "Time", y = "Normalized Value") +
+  theme_minimal()
+```
+
+
+```{r}
+# Split data into training and test sets
+n_train <- as.integer(0.8*nrow(data_ts))
+train_data <- head(data_ts, n_train)
+test_data <- tail(data_ts, -n_train)
+```
+
+
+```{r}
+nrow(df)
+```
+
+
+```{r}
+#Save the predicted values to a CSV file
+#write.csv(test_data, "test_data.csv", row.names = FALSE)
+```
+
+```{r}
+library(vars)
+VARselect(train_data, lag.max = 15, type = "const", season = 365)
+```
+
+```{r}
+VP5C <- vars::VAR(train_data, p=5, season = 365, type = "const")
+```
+
+```{r}
+# Forecasting
+forecast_VP5C <- forecast(VP5C, h = 968)
+
+forecast_VP5C_df <- data.frame(
+  TS = forecast_VP5C$forecast$TS,
+  PRECTOTCORR = forecast_VP5C$forecast$PRECTOTCORR,
+  WS10M = forecast_VP5C$forecast$WS10M
+)
+```
+
+
+```{r}
+# plot 
+train_data[,"TS"] %>% 
+  autoplot(main = "TS") +
+  autolayer(test_data[,"TS"], series = "Test Data") +
+  autolayer(forecast_VP5C$forecast$TS$mean, series = "Forecast")
+
+train_data[,"PRECTOTCORR"] %>% 
+  autoplot(main = "PRECTOTCORR") +
+  autolayer(test_data[,"PRECTOTCORR"], series = "Test Data") +
+  autolayer(forecast_VP5C$forecast$PRECTOTCORR$mean, series = "Forecast")
+
+train_data[,"WS10M"] %>% 
+  autoplot(main = "WS10M") +
+  autolayer(test_data[,"WS10M"], series = "Test Data") +
+  autolayer(forecast_VP5C$forecast$WS10M$mean, series = "Forecast")
+```
+
+```{r}
+# Membuat DataFrame Data_Ramalan dari hasil forecast
+Data_Ramalan <- data.frame(
+  TS_Forecast = forecast_VP5C$forecast$TS$mean,
+  PRECTOTCORR_Forecast = forecast_VP5C$forecast$PRECTOTCORR$mean,
+  WS10M_Forecast = forecast_VP5C$forecast$WS10M$mean
+)
+
+# Melihat data yang telah dibuat
+head(Data_Ramalan)
+```
+
+```{r}
+Data_Aktual <- read.csv("~/Downloads/test_data.csv", sep = ",")
+```
+```{r}
+# Menghitung nilai error (perbedaan antara nilai aktual dan ramalan)
+error_TS <- Data_Aktual$TS - Data_Ramalan$TS_Forecast[1:nrow(Data_Aktual)]
+error_PRECTOTCORR <- Data_Aktual$PRECTOTCORR - Data_Ramalan$PRECTOTCORR_Forecast[1:nrow(Data_Aktual)]
+error_WS10M <- Data_Aktual$WS10M - Data_Ramalan$WS10M_Forecast[1:nrow(Data_Aktual)]
+
+# Fungsi untuk menghitung MAE, MSE, dan RMSE
+calculate_metrics <- function(actual, forecast) {
+  mae <- mean(abs(actual - forecast))  # Mean Absolute Error
+  mse <- mean((actual - forecast)^2)   # Mean Squared Error
+  rmse <- sqrt(mse)                    # Root Mean Squared Error
+  
+  return(list(MAE = mae, MSE = mse, RMSE = rmse))
+}
+
+# Menghitung nilai MAE, MSE, RMSE untuk TS
+metrics_TS <- calculate_metrics(Data_Aktual$TS, Data_Ramalan$TS_Forecast[1:nrow(Data_Aktual)])
+# Menghitung nilai MAE, MSE, RMSE untuk PRECTOTCORR
+metrics_PRECTOTCORR <- calculate_metrics(Data_Aktual$PRECTOTCORR, Data_Ramalan$PRECTOTCORR_Forecast[1:nrow(Data_Aktual)])
+# Menghitung nilai MAE, MSE, RMSE untuk WS10M
+metrics_WS10M <- calculate_metrics(Data_Aktual$WS10M, Data_Ramalan$WS10M_Forecast[1:nrow(Data_Aktual)])
+
+# Print hasil
+print("Metrics for TS:")
+print(metrics_TS)
+print("Metrics for PRECTOTCORR:")
+print(metrics_PRECTOTCORR)
+print("Metrics for WS10M:")
+print(metrics_WS10M)
+```
+```{r}
+# Fungsi untuk membalikkan normalisasi menggunakan Min-Max Scaling
+inverse_min_max <- function(normalized, min_val, max_val) {
+  return(normalized * (max_val - min_val) + min_val)
+}
+
+# Mengembalikan nilai yang telah di-normalisasi ke skala asli pada forecast
+Data_Ramalan$TS_Original <- inverse_min_max(Data_Ramalan$TS_Forecast, min_values["TS"], max_values["TS"])
+Data_Ramalan$PRECTOTCORR_Original <- inverse_min_max(Data_Ramalan$PRECTOTCORR_Forecast, min_values["PRECTOTCORR"], max_values["PRECTOTCORR"])
+Data_Ramalan$WS10M_Original <- inverse_min_max(Data_Ramalan$WS10M_Forecast, min_values["WS10M"], max_values["WS10M"])
+
+# Mengembalikan test_data juga ke skala asli
+test_data_original <- data.frame(
+  TS = inverse_min_max(test_data[, "TS"], min_values["TS"], max_values["TS"]),
+  PRECTOTCORR = inverse_min_max(test_data[, "PRECTOTCORR"], min_values["PRECTOTCORR"], max_values["PRECTOTCORR"]),
+  WS10M = inverse_min_max(test_data[, "WS10M"], min_values["WS10M"], max_values["WS10M"])
+)
+
+# Plot setelah inverse (menggunakan data asli, bukan normalisasi)
+ggplot() +
+  geom_line(aes(x = seq_along(test_data_original$TS), y = test_data_original$TS), color = "blue", linetype = "dashed") +
+  geom_line(aes(x = seq_along(Data_Ramalan$TS_Original), y = Data_Ramalan$TS_Original), color = "red") +
+  labs(title = "TS: Actual vs Forecast (Original Scale)", x = "Time", y = "TS") +
+  theme_minimal()
+
+ggplot() +
+  geom_line(aes(x = seq_along(test_data_original$PRECTOTCORR), y = test_data_original$PRECTOTCORR), color = "blue", linetype = "dashed") +
+  geom_line(aes(x = seq_along(Data_Ramalan$PRECTOTCORR_Original), y = Data_Ramalan$PRECTOTCORR_Original), color = "red") +
+  labs(title = "PRECTOTCORR: Actual vs Forecast (Original Scale)", x = "Time", y = "PRECTOTCORR") +
+  theme_minimal()
+
+ggplot() +
+  geom_line(aes(x = seq_along(test_data_original$WS10M), y = test_data_original$WS10M), color = "blue", linetype = "dashed") +
+  geom_line(aes(x = seq_along(Data_Ramalan$WS10M_Original), y = Data_Ramalan$WS10M_Original), color = "red") +
+  labs(title = "WS10M: Actual vs Forecast (Original Scale)", x = "Time", y = "WS10M") +
+  theme_minimal()
+
+
+```
+
+```{r}
+# Fungsi untuk membalikkan normalisasi menggunakan Min-Max Scaling
+inverse_min_max <- function(normalized, min_val, max_val) {
+  return(normalized * (max_val - min_val) + min_val)
+}
+
+# Mengembalikan nilai yang telah di-normalisasi ke skala asli pada forecast
+Data_Ramalan$TS_Original <- inverse_min_max(Data_Ramalan$TS_Forecast, min_values["TS"], max_values["TS"])
+Data_Ramalan$PRECTOTCORR_Original <- inverse_min_max(Data_Ramalan$PRECTOTCORR_Forecast, min_values["PRECTOTCORR"], max_values["PRECTOTCORR"])
+Data_Ramalan$WS10M_Original <- inverse_min_max(Data_Ramalan$WS10M_Forecast, min_values["WS10M"], max_values["WS10M"])
+
+# Tentukan tanggal prediksi
+last_date <- max(df$Date)  # Tanggal terakhir dari data asli
+prediction_dates <- seq.Date(from = last_date + 1, by = "day", length.out = nrow(Data_Ramalan))
+
+# Gabungkan data prediksi dengan tanggal
+Data_Ramalan_Final <- data.frame(
+  Date = prediction_dates,
+  TS_Predicted = Data_Ramalan$TS_Original,
+  PRECTOTCORR_Predicted = Data_Ramalan$PRECTOTCORR_Original,
+  WS10M_Predicted = Data_Ramalan$WS10M_Original
+)
+
+# Simpan data prediksi ke dalam file CSV
+output_file <- "~/Downloads/Data_Prediksi_Inverse.csv"
+write.csv(Data_Ramalan_Final, output_file, row.names = FALSE)
+
+# Konfirmasi penyimpanan file
+print(paste("Data prediksi yang sudah di inverse telah disimpan dalam file", output_file))
+
+```
+
