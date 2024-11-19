@@ -1,0 +1,558 @@
+---
+title: "VAR Danau Maninjau"
+author: "Khroos"
+date: "2024-09-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Panggil library
+library(readr)
+
+# Panggil data dari path yang ditentukan
+data_ta <- read.csv("~/Downloads/DATA TRAIN.csv", sep = ";")
+head(data_ta)
+
+```
+```{r}
+# Ubah kolom DATE menjadi tipe Date dengan format tanggal/bulan/tahun
+data_ta$Date <- as.Date(data_ta$Date, format = "%d/%m/%Y")
+
+# Tampilkan beberapa baris pertama dari data untuk memastikan
+head(data_ta)
+```
+
+
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(tidyr)
+
+# Replace commas with periods and convert numeric columns
+data_ta_clean <- data_ta %>%
+  mutate(across(where(is.character), ~ as.numeric(gsub(",", ".", .))))
+
+# Compute summary statistics using reframe()
+stat_summary <- data_ta_clean %>%
+  select(where(is.numeric)) %>%
+  reframe(
+    Variable = names(.),
+    Min = sapply(., min, na.rm = TRUE),
+    Median = sapply(., median, na.rm = TRUE),
+    Mean = sapply(., mean, na.rm = TRUE),
+    Max = sapply(., max, na.rm = TRUE),
+    IQR = sapply(., IQR, na.rm = TRUE),
+    Stdv = sapply(., sd, na.rm = TRUE)
+  )
+
+# Rename variables (adjust based on actual column names)
+stat_summary <- stat_summary %>%
+  mutate(Variable = case_when(
+    Variable == "TS" ~ "suhu",
+    Variable == "PRECTOTCORR" ~ "curah.hujan",
+    Variable == "WS10M" ~ "Kecepatan.Angin",
+    TRUE ~ Variable
+  ))
+
+# Display the updated summary statistics
+stat_summary
+```
+```{r}
+# Panggil library yang diperlukan
+library(dplyr)
+library(ggplot2)
+
+# Pastikan kolom DATE dalam format Date
+data_ta$Date <- as.Date(data_ta$Date, format = "%d-%m-%Y")
+
+# Tambahkan kolom Tahun ke data_ta
+data_ta <- data_ta %>%
+  mutate(Tahun = format(Date, "%Y"))
+
+# Plot boxplot untuk masing-masing variabel per tahun dengan jitter
+# Ensure the columns are properly formatted
+data_ta_clean <- data_ta %>%
+  mutate(
+    PRECTOTCORR = as.numeric(gsub(",", ".", PRECTOTCORR)),
+    Tahun = format(as.Date(Date, format = "%d/%m/%Y"), "%Y")  # Extract Tahun from Date
+  )
+
+# Create the boxplot
+ggplot(data_ta_clean, aes(x = Tahun, y = PRECTOTCORR)) +
+  geom_boxplot(outlier.shape = NA, fill = "lightblue", alpha = 0.7) +  # Remove outliers, customize fill
+  geom_jitter(width = 0.2, alpha = 0.5, color = "blue") +  # Add jitter for data points
+  labs(
+    title = "Boxplot Kejernihan Langit per Tahun",
+    x = "Tahun",
+    y = "Kejernihan Langit (PRECTOTCORR)"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for clarity
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5)  # Center and style title
+  )
+```
+```{r}
+# Ensure the columns are properly formatted
+data_ta_clean <- data_ta %>%
+  mutate(
+    PRECTOTCORR = as.numeric(gsub(",", ".", TS)),
+    Tahun = format(as.Date(Date, format = "%d/%m/%Y"), "%Y")  # Extract Tahun from Date
+  )
+
+# Create the boxplot
+ggplot(data_ta_clean, aes(x = Tahun, y = PRECTOTCORR)) +
+  geom_boxplot(outlier.shape = NA, fill = "lightblue", alpha = 0.7) +  # Remove outliers, customize fill
+  geom_jitter(width = 0.2, alpha = 0.5, color = "blue") +  # Add jitter for data points
+  labs(
+    title = "Boxplot Kejernihan Langit per Tahun",
+    x = "Tahun",
+    y = "Kejernihan Langit (PRECTOTCORR)"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for clarity
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5)  # Center and style title
+  )
+```
+```{r}
+# Ensure the columns are properly formatted
+data_ta_clean <- data_ta %>%
+  mutate(
+    PRECTOTCORR = as.numeric(gsub(",", ".", WS10M)),
+    Tahun = format(as.Date(Date, format = "%d/%m/%Y"), "%Y")  # Extract Tahun from Date
+  )
+
+# Create the boxplot
+ggplot(data_ta_clean, aes(x = Tahun, y = PRECTOTCORR)) +
+  geom_boxplot(outlier.shape = NA, fill = "lightblue", alpha = 0.7) +  # Remove outliers, customize fill
+  geom_jitter(width = 0.2, alpha = 0.5, color = "blue") +  # Add jitter for data points
+  labs(
+    title = "Boxplot Kejernihan Langit per Tahun",
+    x = "Tahun",
+    y = "Kejernihan Langit (PRECTOTCORR)"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for clarity
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5)  # Center and style title
+  )
+```
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(forecast)
+library(ggfortify)
+
+# Ensure numeric conversion for columns
+data_ta_clean <- data_ta %>%
+  mutate(
+    TS = as.numeric(gsub(",", ".", TS)),
+    PRECTOTCORR = as.numeric(gsub(",", ".", PRECTOTCORR)),
+    WS10M = as.numeric(gsub(",", ".", WS10M)),
+    Date = as.Date(Date, format = "%d/%m/%Y")
+  )
+
+# Create time series objects
+suhu <- ts(data_ta_clean$TS, start = c(as.numeric(format(min(data_ta_clean$Date), "%Y")), 1), frequency = 365)
+curah_hujan <- ts(data_ta_clean$PRECTOTCORR, start = c(as.numeric(format(min(data_ta_clean$Date), "%Y")), 1), frequency = 365)
+kecepatan_angin <- ts(data_ta_clean$WS10M, start = c(as.numeric(format(min(data_ta_clean$Date), "%Y")), 1), frequency = 365)
+
+```
+```{r}
+# Plot time series FOR curah hujan (PRCTOTCORR)
+autoplot(suhu) +
+  labs(
+    title = "Time Series Plot: suhu (T2M)",
+    x = "Time",
+    y = "sumu (T2M)"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+# Plot time series FOR curah hujan (PRCTOTCORR)
+autoplot(curah_hujan) +
+  labs(
+    title = "Time Series Plot: curah hujan (PRCTOTCORR)",
+    x = "Time",
+    y = "curah hujan (PRCTOTCORR)"
+  ) +
+  theme_minimal()
+```
+```{r}
+# Plot time series for Suhu
+autoplot(kecepatan_angin) +
+  labs(
+    title = "Time Series Plot: kecepatan angin (WS10M)",
+    x = "Time",
+    y = "kecepatan angin (WS10M)"
+  ) +
+  theme_minimal()
+```
+```{r}
+# Load necessary libraries
+library(forecast)
+library(ggplot2)
+library(dplyr)
+
+# Ensure numeric conversion for the relevant columns
+data_ta_clean <- data_ta %>%
+  mutate(
+    PRECTOTCORR = as.numeric(gsub(",", ".", PRECTOTCORR)),
+    TS = as.numeric(gsub(",", ".", TS)),
+    WS10M = as.numeric(gsub(",", ".", WS10M))
+  )
+
+# Create time series objects with daily frequency (assuming 365 days per year)
+ts_curah_hujan <- ts(data_ta_clean$PRECTOTCORR, frequency = 365, start = c(2022, 1))
+ts_suhu <- ts(data_ta_clean$TS, frequency = 365, start = c(2022, 1))
+ts_kecepatan_angin <- ts(data_ta_clean$WS10M, frequency = 365, start = c(2022, 1))
+```
+
+
+```{r}
+# Decomposition for Curah Hujan
+decompose_curah_hujan <- stl(ts_curah_hujan, s.window = "periodic")
+plot(decompose_curah_hujan, main = "Decomposition of Curah Hujan (PRECTOTCORR)")
+```
+
+
+```{r}
+# Decomposition for Suhu
+decompose_suhu <- stl(ts_suhu, s.window = "periodic")
+plot(decompose_suhu, main = "Decomposition of Suhu (TS)")
+```
+
+
+```{r}
+# Decomposition for Kecepatan Angin
+decompose_kecepatan_angin <- stl(ts_kecepatan_angin, s.window = "periodic")
+plot(decompose_kecepatan_angin, main = "Decomposition of Kecepatan Angin (WS10M)")
+
+```
+```{r}
+library(forecast)
+
+# Menghitung nilai lambda Box-Cox untuk setiap variabel
+lambda.curah_hujan <- BoxCox.lambda(data_ta_clean$PRECTOTCORR)
+lambda.Suhu <- BoxCox.lambda(data_ta_clean$TS)
+lambda.Kecepatan_Angin <- BoxCox.lambda(data_ta_clean$WS10M)
+
+# Membuat data frame untuk menyimpan hasil
+lambda_table <- data.frame(
+  Variable = c("curah.hujan", "Suhu", "Kecepatan.Angin"),
+  Lambda = c(lambda.curah_hujan, lambda.Suhu, lambda.Kecepatan_Angin)
+)
+
+# Menampilkan tabel
+print(lambda_table)
+```
+```{r}
+# Panggil library yang diperlukan
+library(forecast)
+library(dplyr)
+
+# Step 1: Konversi kolom menjadi numerik (mengganti koma dengan titik)
+data_ta <- data_ta %>%
+  mutate(
+    PRECTOTCORR = as.numeric(gsub(",", ".", PRECTOTCORR)) + 1e-6,  # Pastikan positif
+    TS = as.numeric(gsub(",", ".", TS)) + 1e-6,                   # Pastikan positif
+    WS10M = as.numeric(gsub(",", ".", WS10M)) + 1e-6             # Pastikan positif
+  )
+
+# Step 2: Menghitung nilai lambda Box-Cox untuk variabel awal
+lambda_awal_curah_hujan <- BoxCox.lambda(data_ta$PRECTOTCORR)
+lambda_awal_suhu <- BoxCox.lambda(data_ta$TS)
+lambda_awal_kecepatan_angin <- BoxCox.lambda(data_ta$WS10M)
+
+# Step 3: Buat data frame baru dengan transformasi pada setiap variabel
+data_ta_transformasi <- data_ta %>%
+  mutate(
+    PRECTOTCORR = PRECTOTCORR^1.7,  # Transformasi variabel PRECTOTCORR
+    TS = (TS ^ 4.3) / 1000000,      # Transformasi variabel TS
+    WS10M = (WS10M^0.33) / 10       # Transformasi variabel WS10M
+  )
+
+# Step 4: Menghitung nilai lambda Box-Cox untuk variabel yang sudah ditransformasi
+lambda_transformasi_curah_hujan <- BoxCox.lambda(data_ta_transformasi$PRECTOTCORR)
+lambda_transformasi_suhu <- BoxCox.lambda(data_ta_transformasi$TS)
+lambda_transformasi_kecepatan_angin <- BoxCox.lambda(data_ta_transformasi$WS10M)
+
+# Step 5: Membuat tabel hasil lambda awal dan transformasi
+lambda_table <- data.frame(
+  Variable = c("Curah Hujan (PRECTOTCORR)", "Suhu (TS)", "Kecepatan Angin (WS10M)"),
+  Lambda_Awal = c(lambda_awal_curah_hujan, lambda_awal_suhu, lambda_awal_kecepatan_angin),
+  Lambda_Transformasi = c(lambda_transformasi_curah_hujan, lambda_transformasi_suhu, lambda_transformasi_kecepatan_angin)
+)
+
+# Step 6: Menampilkan tabel hasil
+print("Tabel Hasil Lambda Awal dan Transformasi:")
+print(lambda_table)
+
+```
+
+
+```{r}
+# Load necessary libraries
+library(forecast)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+
+# Ensure numeric conversion for relevant columns
+data_ta_clean <- data_ta %>%
+  mutate(
+    PRECTOTCORR = as.numeric(gsub(",", ".", PRECTOTCORR)),
+    TS = as.numeric(gsub(",", ".", TS)),
+    WS10M = as.numeric(gsub(",", ".", WS10M))
+  )
+
+# Calculate Box-Cox lambda values
+lambda.curah_hujan <- BoxCox.lambda(data_ta_clean$PRECTOTCORR, lower = -5, upper = 5)
+lambda.suhu <- BoxCox.lambda(data_ta_clean$TS, lower = -5, upper = 5)
+lambda.kecepatan_angin <- BoxCox.lambda(data_ta_clean$WS10M, lower = -5, upper = 5)
+
+# Apply Box-Cox transformations
+data_ta_transformed <- data_ta_clean %>%
+  mutate(
+    curah_hujan_trans = BoxCox(PRECTOTCORR, lambda = lambda.curah_hujan),
+    suhu_trans = BoxCox(TS, lambda = lambda.suhu),
+    kecepatan_angin_trans = BoxCox(WS10M, lambda = lambda.kecepatan_angin)
+  )
+
+# Apply first-order differencing to remove trends
+data_ta_stationary <- data_ta_transformed %>%
+  mutate(
+    curah_hujan_diff = c(NA, diff(curah_hujan_trans, differences = 1)),
+    suhu_diff = c(NA, diff(suhu_trans, differences = 1)),
+    kecepatan_angin_diff = c(NA, diff(kecepatan_angin_trans, differences = 1))
+  )
+
+# Visualize the original, transformed, and stationary data for comparison
+p1 <- ggplot(data_ta_clean, aes(x = 1:nrow(data_ta_clean), y = PRECTOTCORR)) +
+  geom_line(color = "blue") +
+  labs(title = "Original Curah Hujan", x = "Index", y = "PRECTOTCORR")
+
+p2 <- ggplot(data_ta_transformed, aes(x = 1:nrow(data_ta_transformed), y = curah_hujan_trans)) +
+  geom_line(color = "green") +
+  labs(title = "Transformed Curah Hujan", x = "Index", y = "Transformed PRECTOTCORR")
+
+p3 <- ggplot(data_ta_stationary, aes(x = 1:nrow(data_ta_stationary), y = curah_hujan_diff)) +
+  geom_line(color = "red") +
+  labs(title = "Stationary Curah Hujan", x = "Index", y = "Differenced PRECTOTCORR")
+
+p4 <- ggplot(data_ta_clean, aes(x = 1:nrow(data_ta_clean), y = TS)) +
+  geom_line(color = "blue") +
+  labs(title = "Original Suhu", x = "Index", y = "TS")
+
+p5 <- ggplot(data_ta_transformed, aes(x = 1:nrow(data_ta_transformed), y = suhu_trans)) +
+  geom_line(color = "green") +
+  labs(title = "Transformed Suhu", x = "Index", y = "Transformed TS")
+
+p6 <- ggplot(data_ta_stationary, aes(x = 1:nrow(data_ta_stationary), y = suhu_diff)) +
+  geom_line(color = "red") +
+  labs(title = "Stationary Suhu", x = "Index", y = "Differenced TS")
+
+p7 <- ggplot(data_ta_clean, aes(x = 1:nrow(data_ta_clean), y = WS10M)) +
+  geom_line(color = "blue") +
+  labs(title = "Original Kecepatan Angin", x = "Index", y = "WS10M")
+
+p8 <- ggplot(data_ta_transformed, aes(x = 1:nrow(data_ta_transformed), y = kecepatan_angin_trans)) +
+  geom_line(color = "green") +
+  labs(title = "Transformed Kecepatan Angin", x = "Index", y = "Transformed WS10M")
+
+p9 <- ggplot(data_ta_stationary, aes(x = 1:nrow(data_ta_stationary), y = kecepatan_angin_diff)) +
+  geom_line(color = "red") +
+  labs(title = "Stationary Kecepatan Angin", x = "Index", y = "Differenced WS10M")
+
+# Combine plots using gridExtra
+grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, ncol = 3)
+
+```
+
+
+```{r}
+```
+
+
+
+
+```{r}
+# Split data into training and test sets
+n_train <- as.integer(0.8*nrow(data_ts))
+train_data <- head(data_ts, n_train)
+test_data <- tail(data_ts, -n_train)
+```
+
+
+```{r}
+nrow(df)
+```
+
+
+```{r}
+#Save the predicted values to a CSV file
+#write.csv(test_data, "test_data.csv", row.names = FALSE)
+```
+
+```{r}
+library(vars)
+VARselect(train_data, lag.max = 15, type = "const", season = 365)
+```
+
+```{r}
+VP5C <- vars::VAR(train_data, p=5, season = 365, type = "const")
+```
+
+```{r}
+# Forecasting
+forecast_VP5C <- forecast(VP5C, h = 968)
+
+forecast_VP5C_df <- data.frame(
+  TS = forecast_VP5C$forecast$TS,
+  PRECTOTCORR = forecast_VP5C$forecast$PRECTOTCORR,
+  WS10M = forecast_VP5C$forecast$WS10M
+)
+```
+
+
+```{r}
+# plot 
+train_data[,"TS"] %>% 
+  autoplot(main = "TS") +
+  autolayer(test_data[,"TS"], series = "Test Data") +
+  autolayer(forecast_VP5C$forecast$TS$mean, series = "Forecast")
+
+train_data[,"PRECTOTCORR"] %>% 
+  autoplot(main = "PRECTOTCORR") +
+  autolayer(test_data[,"PRECTOTCORR"], series = "Test Data") +
+  autolayer(forecast_VP5C$forecast$PRECTOTCORR$mean, series = "Forecast")
+
+train_data[,"WS10M"] %>% 
+  autoplot(main = "WS10M") +
+  autolayer(test_data[,"WS10M"], series = "Test Data") +
+  autolayer(forecast_VP5C$forecast$WS10M$mean, series = "Forecast")
+```
+
+```{r}
+# Membuat DataFrame Data_Ramalan dari hasil forecast
+Data_Ramalan <- data.frame(
+  TS_Forecast = forecast_VP5C$forecast$TS$mean,
+  PRECTOTCORR_Forecast = forecast_VP5C$forecast$PRECTOTCORR$mean,
+  WS10M_Forecast = forecast_VP5C$forecast$WS10M$mean
+)
+
+# Melihat data yang telah dibuat
+head(Data_Ramalan)
+```
+
+```{r}
+Data_Aktual <- read.csv("~/Downloads/test_data.csv", sep = ",")
+```
+```{r}
+# Menghitung nilai error (perbedaan antara nilai aktual dan ramalan)
+error_TS <- Data_Aktual$TS - Data_Ramalan$TS_Forecast[1:nrow(Data_Aktual)]
+error_PRECTOTCORR <- Data_Aktual$PRECTOTCORR - Data_Ramalan$PRECTOTCORR_Forecast[1:nrow(Data_Aktual)]
+error_WS10M <- Data_Aktual$WS10M - Data_Ramalan$WS10M_Forecast[1:nrow(Data_Aktual)]
+
+# Fungsi untuk menghitung MAE, MSE, dan RMSE
+calculate_metrics <- function(actual, forecast) {
+  mae <- mean(abs(actual - forecast))  # Mean Absolute Error
+  mse <- mean((actual - forecast)^2)   # Mean Squared Error
+  rmse <- sqrt(mse)                    # Root Mean Squared Error
+  
+  return(list(MAE = mae, MSE = mse, RMSE = rmse))
+}
+
+# Menghitung nilai MAE, MSE, RMSE untuk TS
+metrics_TS <- calculate_metrics(Data_Aktual$TS, Data_Ramalan$TS_Forecast[1:nrow(Data_Aktual)])
+# Menghitung nilai MAE, MSE, RMSE untuk PRECTOTCORR
+metrics_PRECTOTCORR <- calculate_metrics(Data_Aktual$PRECTOTCORR, Data_Ramalan$PRECTOTCORR_Forecast[1:nrow(Data_Aktual)])
+# Menghitung nilai MAE, MSE, RMSE untuk WS10M
+metrics_WS10M <- calculate_metrics(Data_Aktual$WS10M, Data_Ramalan$WS10M_Forecast[1:nrow(Data_Aktual)])
+
+# Print hasil
+print("Metrics for TS:")
+print(metrics_TS)
+print("Metrics for PRECTOTCORR:")
+print(metrics_PRECTOTCORR)
+print("Metrics for WS10M:")
+print(metrics_WS10M)
+```
+```{r}
+# Fungsi untuk membalikkan normalisasi menggunakan Min-Max Scaling
+inverse_min_max <- function(normalized, min_val, max_val) {
+  return(normalized * (max_val - min_val) + min_val)
+}
+
+# Mengembalikan nilai yang telah di-normalisasi ke skala asli pada forecast
+Data_Ramalan$TS_Original <- inverse_min_max(Data_Ramalan$TS_Forecast, min_values["TS"], max_values["TS"])
+Data_Ramalan$PRECTOTCORR_Original <- inverse_min_max(Data_Ramalan$PRECTOTCORR_Forecast, min_values["PRECTOTCORR"], max_values["PRECTOTCORR"])
+Data_Ramalan$WS10M_Original <- inverse_min_max(Data_Ramalan$WS10M_Forecast, min_values["WS10M"], max_values["WS10M"])
+
+# Mengembalikan test_data juga ke skala asli
+test_data_original <- data.frame(
+  TS = inverse_min_max(test_data[, "TS"], min_values["TS"], max_values["TS"]),
+  PRECTOTCORR = inverse_min_max(test_data[, "PRECTOTCORR"], min_values["PRECTOTCORR"], max_values["PRECTOTCORR"]),
+  WS10M = inverse_min_max(test_data[, "WS10M"], min_values["WS10M"], max_values["WS10M"])
+)
+
+# Plot setelah inverse (menggunakan data asli, bukan normalisasi)
+ggplot() +
+  geom_line(aes(x = seq_along(test_data_original$TS), y = test_data_original$TS), color = "blue", linetype = "dashed") +
+  geom_line(aes(x = seq_along(Data_Ramalan$TS_Original), y = Data_Ramalan$TS_Original), color = "red") +
+  labs(title = "TS: Actual vs Forecast (Original Scale)", x = "Time", y = "TS") +
+  theme_minimal()
+
+ggplot() +
+  geom_line(aes(x = seq_along(test_data_original$PRECTOTCORR), y = test_data_original$PRECTOTCORR), color = "blue", linetype = "dashed") +
+  geom_line(aes(x = seq_along(Data_Ramalan$PRECTOTCORR_Original), y = Data_Ramalan$PRECTOTCORR_Original), color = "red") +
+  labs(title = "PRECTOTCORR: Actual vs Forecast (Original Scale)", x = "Time", y = "PRECTOTCORR") +
+  theme_minimal()
+
+ggplot() +
+  geom_line(aes(x = seq_along(test_data_original$WS10M), y = test_data_original$WS10M), color = "blue", linetype = "dashed") +
+  geom_line(aes(x = seq_along(Data_Ramalan$WS10M_Original), y = Data_Ramalan$WS10M_Original), color = "red") +
+  labs(title = "WS10M: Actual vs Forecast (Original Scale)", x = "Time", y = "WS10M") +
+  theme_minimal()
+
+
+```
+
+```{r}
+# Fungsi untuk membalikkan normalisasi menggunakan Min-Max Scaling
+inverse_min_max <- function(normalized, min_val, max_val) {
+  return(normalized * (max_val - min_val) + min_val)
+}
+
+# Mengembalikan nilai yang telah di-normalisasi ke skala asli pada forecast
+Data_Ramalan$TS_Original <- inverse_min_max(Data_Ramalan$TS_Forecast, min_values["TS"], max_values["TS"])
+Data_Ramalan$PRECTOTCORR_Original <- inverse_min_max(Data_Ramalan$PRECTOTCORR_Forecast, min_values["PRECTOTCORR"], max_values["PRECTOTCORR"])
+Data_Ramalan$WS10M_Original <- inverse_min_max(Data_Ramalan$WS10M_Forecast, min_values["WS10M"], max_values["WS10M"])
+
+# Tentukan tanggal prediksi
+last_date <- max(df$Date)  # Tanggal terakhir dari data asli
+prediction_dates <- seq.Date(from = last_date + 1, by = "day", length.out = nrow(Data_Ramalan))
+
+# Gabungkan data prediksi dengan tanggal
+Data_Ramalan_Final <- data.frame(
+  Date = prediction_dates,
+  TS_Predicted = Data_Ramalan$TS_Original,
+  PRECTOTCORR_Predicted = Data_Ramalan$PRECTOTCORR_Original,
+  WS10M_Predicted = Data_Ramalan$WS10M_Original
+)
+
+# Simpan data prediksi ke dalam file CSV
+output_file <- "~/Downloads/Data_Prediksi_Inverse.csv"
+write.csv(Data_Ramalan_Final, output_file, row.names = FALSE)
+
+# Konfirmasi penyimpanan file
+print(paste("Data prediksi yang sudah di inverse telah disimpan dalam file", output_file))
+
+```
+
