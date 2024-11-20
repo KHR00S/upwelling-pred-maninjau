@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(readr)
 
 # Panggil data dari path yang ditentukan
-data_ta <- read.csv("~/Downloads/DATA TRAIN.csv", sep = ";")
+data_ta <- read.csv("D:/MODELING_ML/GIT/upwelling-pred-maninjau/data/DATA TRAIN.csv", sep = ",")
 head(data_ta)
 
 ```
@@ -66,81 +66,40 @@ stat_summary
 library(dplyr)
 library(ggplot2)
 
-# Pastikan kolom DATE dalam format Date
-data_ta$Date <- as.Date(data_ta$Date, format = "%d-%m-%Y")
+data_ta <- data_ta %>%
+  filter(!is.na(Date))
 
 # Tambahkan kolom Tahun ke data_ta
 data_ta <- data_ta %>%
   mutate(Tahun = format(Date, "%Y"))
 
 # Plot boxplot untuk masing-masing variabel per tahun dengan jitter
-# Ensure the columns are properly formatted
-data_ta_clean <- data_ta %>%
-  mutate(
-    PRECTOTCORR = as.numeric(gsub(",", ".", PRECTOTCORR)),
-    Tahun = format(as.Date(Date, format = "%d/%m/%Y"), "%Y")  # Extract Tahun from Date
-  )
+# Boxplot untuk Kejernihan.Langit per tahun
+ggplot(data_ta, aes(x = Tahun, y = PRECTOTCORR)) +
+  geom_boxplot(outlier.shape = NA) +  # Hapus outliers dari boxplot untuk tidak bertumpuk
+  geom_jitter(width = 0.2, alpha = 0.5, color = "skyblue") +  # Tambahkan jitter
+  labs(title = "Boxplot Kejernihan Langit per Tahun", x = "Tahun", y = "Kejernihan Langit") +
+  theme_minimal()
+```
 
-# Create the boxplot
-ggplot(data_ta_clean, aes(x = Tahun, y = PRECTOTCORR)) +
-  geom_boxplot(outlier.shape = NA, fill = "lightblue", alpha = 0.7) +  # Remove outliers, customize fill
-  geom_jitter(width = 0.2, alpha = 0.5, color = "blue") +  # Add jitter for data points
-  labs(
-    title = "Boxplot Kejernihan Langit per Tahun",
-    x = "Tahun",
-    y = "Kejernihan Langit (PRECTOTCORR)"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for clarity
-    plot.title = element_text(size = 14, face = "bold", hjust = 0.5)  # Center and style title
-  )
+
+```{r}
+# Plot boxplot untuk masing-masing variabel per tahun dengan jitter
+# Boxplot untuk Kejernihan.Langit per tahun
+ggplot(data_ta, aes(x = Tahun, y = TS)) +
+  geom_boxplot(outlier.shape = NA) +  # Hapus outliers dari boxplot untuk tidak bertumpuk
+  geom_jitter(width = 0.2, alpha = 0.5, color = "skyblue") +  # Tambahkan jitter
+  labs(title = "Boxplot Kejernihan Langit per Tahun", x = "Tahun", y = "Kejernihan Langit") +
+  theme_minimal()
 ```
 ```{r}
-# Ensure the columns are properly formatted
-data_ta_clean <- data_ta %>%
-  mutate(
-    PRECTOTCORR = as.numeric(gsub(",", ".", TS)),
-    Tahun = format(as.Date(Date, format = "%d/%m/%Y"), "%Y")  # Extract Tahun from Date
-  )
-
-# Create the boxplot
-ggplot(data_ta_clean, aes(x = Tahun, y = PRECTOTCORR)) +
-  geom_boxplot(outlier.shape = NA, fill = "lightblue", alpha = 0.7) +  # Remove outliers, customize fill
-  geom_jitter(width = 0.2, alpha = 0.5, color = "blue") +  # Add jitter for data points
-  labs(
-    title = "Boxplot Kejernihan Langit per Tahun",
-    x = "Tahun",
-    y = "Kejernihan Langit (PRECTOTCORR)"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for clarity
-    plot.title = element_text(size = 14, face = "bold", hjust = 0.5)  # Center and style title
-  )
-```
-```{r}
-# Ensure the columns are properly formatted
-data_ta_clean <- data_ta %>%
-  mutate(
-    PRECTOTCORR = as.numeric(gsub(",", ".", WS10M)),
-    Tahun = format(as.Date(Date, format = "%d/%m/%Y"), "%Y")  # Extract Tahun from Date
-  )
-
-# Create the boxplot
-ggplot(data_ta_clean, aes(x = Tahun, y = PRECTOTCORR)) +
-  geom_boxplot(outlier.shape = NA, fill = "lightblue", alpha = 0.7) +  # Remove outliers, customize fill
-  geom_jitter(width = 0.2, alpha = 0.5, color = "blue") +  # Add jitter for data points
-  labs(
-    title = "Boxplot Kejernihan Langit per Tahun",
-    x = "Tahun",
-    y = "Kejernihan Langit (PRECTOTCORR)"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for clarity
-    plot.title = element_text(size = 14, face = "bold", hjust = 0.5)  # Center and style title
-  )
+# Plot boxplot untuk masing-masing variabel per tahun dengan jitter
+# Boxplot untuk Kejernihan.Langit per tahun
+ggplot(data_ta, aes(x = Tahun, y = WS10M)) +
+  geom_boxplot(outlier.shape = NA) +  # Hapus outliers dari boxplot untuk tidak bertumpuk
+  geom_jitter(width = 0.2, alpha = 0.5, color = "skyblue") +  # Tambahkan jitter
+  labs(title = "Boxplot Kejernihan Langit per Tahun", x = "Tahun", y = "Kejernihan Langit") +
+  theme_minimal()
 ```
 ```{r}
 # Load necessary libraries
@@ -154,7 +113,6 @@ data_ta_clean <- data_ta %>%
     TS = as.numeric(gsub(",", ".", TS)),
     PRECTOTCORR = as.numeric(gsub(",", ".", PRECTOTCORR)),
     WS10M = as.numeric(gsub(",", ".", WS10M)),
-    Date = as.Date(Date, format = "%d/%m/%Y")
   )
 
 # Create time series objects
@@ -273,9 +231,9 @@ lambda_awal_kecepatan_angin <- BoxCox.lambda(data_ta$WS10M)
 # Step 3: Buat data frame baru dengan transformasi pada setiap variabel
 data_ta_transformasi <- data_ta %>%
   mutate(
-    PRECTOTCORR = PRECTOTCORR^1.7,  # Transformasi variabel PRECTOTCORR
-    TS = (TS ^ 4.3) / 1000000,      # Transformasi variabel TS
-    WS10M = (WS10M^0.33) / 10       # Transformasi variabel WS10M
+    PRECTOTCORR = round((log(PRECTOTCORR) * 1000000000), 1),  # Transformasi dan pembulatan PRECTOTCORR
+    TS = (TS ^ 3.0) / 1000000,                      # Transformasi dan pembulatan TS
+    WS10M = round((log(WS10M / 2) * 10), 1)                   # Transformasi dan pembulatan WS10M
   )
 
 # Step 4: Menghitung nilai lambda Box-Cox untuk variabel yang sudah ditransformasi
@@ -295,6 +253,220 @@ print("Tabel Hasil Lambda Awal dan Transformasi:")
 print(lambda_table)
 
 ```
+
+```{r}
+# Panggil library yang diperlukan
+library(tseries)
+
+# Jalankan ADF test untuk setiap variabel numerik pada data_ta_transformasi
+adf_results <- lapply(data_ta_transformasi %>% select(where(is.numeric)), adf.test)
+
+# Tampilkan hasil ADF test untuk setiap variabel
+for (var_name in names(adf_results)) {
+  cat("Hasil ADF test untuk variabel:", var_name, "\n")
+  print(adf_results[[var_name]])
+  cat("\n\n")
+}
+```
+```{r}
+library(knitr)
+
+# Buat tabel rekap hasil ADF test
+rekap_adf_hasil <- data.frame(
+  Variabel = c("Kejernihan.Langit", "Suhu", "Kecepatan.Angin"),
+  DF_Statistic = c(-6.1479, -4.2624, -5.9261),
+  Lag_Order = c(8, 8, 8),
+  P_Value = c(0.01, 0.01, 0.01),
+  Stationarity = c("stationary", "stationary", "stationary")
+)
+
+# Tampilkan tabel menggunakan kable untuk format yang lebih rapi
+kable(rekap_adf_hasil, caption = "Rekap Hasil ADF Test")
+```
+```{r}
+# Panggil library yang diperlukan
+library(lmtest)
+library(dplyr)
+```
+
+```{r}
+# Tentukan urutan lag (order) yang ingin digunakan dalam uji Granger
+lag_order <- 3  # Sesuaikan dengan keperluan analisis Anda
+
+# Lakukan uji Granger Causality antar variabel di data_ta_transformasi
+granger_results <- list()
+
+# Daftar pasangan variabel untuk uji kausalitas Granger
+variable_pairs <- combn(names(data_ta_transformasi %>% select(where(is.numeric))), 2)
+
+# Loop melalui setiap pasangan variabel
+for (i in 1:ncol(variable_pairs)) {
+  var_x <- variable_pairs[1, i]
+  var_y <- variable_pairs[2, i]
+  
+  # Uji apakah var_x menyebabkan var_y
+  granger_xy <- grangertest(as.formula(paste(var_y, "~", var_x)), order = lag_order, data = data_ta_transformasi)
+  granger_results[[paste(var_x, "->", var_y)]] <- granger_xy
+  
+  # Uji apakah var_y menyebabkan var_x
+  granger_yx <- grangertest(as.formula(paste(var_x, "~", var_y)), order = lag_order, data = data_ta_transformasi)
+  granger_results[[paste(var_y, "->", var_x)]] <- granger_yx
+}
+
+# Tampilkan hasil uji Granger untuk setiap pasangan
+for (result in names(granger_results)) {
+  cat("Hasil Granger Causality untuk pasangan:", result, "\n")
+  print(granger_results[[result]])
+  cat("\n\n")
+}
+```
+```{r}
+# Panggil library yang diperlukan
+library(knitr)
+
+# Buat tabel rekap hasil uji Granger Causality
+rekap_hasil <- data.frame(
+  "Pasangan Variabel" = c(
+    "TS -> PRECTOTCORR",
+    "PRECTOTCORR -> TS",
+    "TS -> WS10M",
+    "WS10M -> TS",
+    "PRECTOTCORR -> WS10M",
+    "WS10M -> PRECTOTCORR"
+  ),
+  "F-Statistic" = c(21.24, 26.717, 3.0184, 21.746, 4.401, 6.4994),
+  "P-Value" = c(2.254e-13, 2.2e-16, 0.029, 1.114e-13, 0.004365, 0.0002332),
+  "Significance" = c("***", "***", "*", "***", "**", "***"),
+  "Interpretasi" = c(
+    "TS signifikan memengaruhi PRECTOTCORR",
+    "PRECTOTCORR signifikan memengaruhi TS",
+    "TS memiliki hubungan moderat memengaruhi WS10M",
+    "WS10M signifikan memengaruhi TS",
+    "PRECTOTCORR signifikan memengaruhi WS10M",
+    "WS10M signifikan memengaruhi PRECTOTCORR"
+  ),
+  "Komentar" = c(
+    "Kausalitas kuat dari suhu ke presipitasi.",
+    "Kausalitas kuat dari presipitasi ke suhu.",
+    "Hubungan moderat dari suhu ke kecepatan angin.",
+    "Kausalitas kuat dari kecepatan angin ke suhu.",
+    "Presipitasi memiliki pengaruh signifikan pada kecepatan angin.",
+    "Kecepatan angin memiliki pengaruh signifikan pada presipitasi."
+  )
+)
+
+# Tampilkan tabel menggunakan kable
+kable(
+  rekap_hasil,
+  col.names = c("Pasangan Variabel", "F-Statistic", "P-Value", "Significance", "Interpretasi", "Komentar"),
+  caption = "Rekap Hasil Granger Causality"
+)
+```
+```{r}
+# Tentukan ukuran data train (80% data awal)
+train_size <- floor(0.8 * nrow(data_ta_transformasi))
+
+# Bagi data menjadi data train dan data test
+data_train <- data_ta_transformasi[1:train_size, ]
+data_test <- data_ta_transformasi[(train_size + 1):nrow(data_ta_transformasi), ]
+
+# Tampilkan ukuran data train dan data test
+cat("Jumlah data train:", nrow(data_train), "\n")
+```
+```{r}
+cat("Jumlah data test:", nrow(data_test), "\n")
+```
+```{r}
+# Konversi data ke format time series
+data_ts <- ts(data_train[, c("TS", "PRECTOTCORR", "WS10M")], 
+              start = c(2020, 1),  # Tahun dan hari awal
+              frequency = 365)    # Frekuensi harian (365 hari dalam setahun)
+
+# Panggil library ggplot2 dan forecast untuk plotting
+library(ggplot2)
+library(forecast)
+
+# Plot time series menggunakan autoplot
+autoplot(data_ts, facets = TRUE) +
+  labs(title = "TS, PRECTOTCORR, and WS10M Time Series",
+       x = "Time", y = "Value") +
+  theme_minimal()
+
+```
+
+```{r}
+# Buat dataframe baru tanpa kolom Tahun
+data_train <- data_train[, !(names(data_ta) %in% c("Tahun"))]
+```
+
+```{r}
+library(vars)
+vars::VARselect(data_ts, lag.max = 15, type = "const",season = 365)
+```
+```{r}
+VP5C <- vars::VAR(data_ts, p=5, type = "const",season = 365)
+```
+```{r}
+# Forecasting
+forecast_VP5C <- forecast(VP5C, h = 219+270)
+
+forecast_VP5C_df <- data.frame(
+  TS = forecast_VP5C$forecast$TS,
+  PRECTOTCORR = forecast_VP5C$forecast$PRECTOTCORR,
+  WS10M = forecast_VP5C$forecast$WS10M
+)
+```
+```{r}
+# Library tambahan
+library(ggplot2)
+
+# Forecast TS
+forecast_TS <- data.frame(
+  Time = time(forecast_VP5C$forecast$TS$mean),
+  Forecast = forecast_VP5C$forecast$TS$mean,
+  Lower = forecast_VP5C$forecast$TS$lower[, 2],
+  Upper = forecast_VP5C$forecast$TS$upper[, 2]
+)
+
+# Plot forecast TS
+ggplot(forecast_TS, aes(x = Time)) +
+  geom_line(aes(y = Forecast), color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = Lower, ymax = Upper), alpha = 0.2, fill = "blue") +
+  labs(title = "Forecast for TS", x = "Time", y = "Value") +
+  theme_minimal()
+
+# Forecast PRECTOTCORR
+forecast_PRECTOTCORR <- data.frame(
+  Time = time(forecast_VP5C$forecast$PRECTOTCORR$mean),
+  Forecast = forecast_VP5C$forecast$PRECTOTCORR$mean,
+  Lower = forecast_VP5C$forecast$PRECTOTCORR$lower[, 2],
+  Upper = forecast_VP5C$forecast$PRECTOTCORR$upper[, 2]
+)
+
+# Plot forecast PRECTOTCORR
+ggplot(forecast_PRECTOTCORR, aes(x = Time)) +
+  geom_line(aes(y = Forecast), color = "green", size = 1) +
+  geom_ribbon(aes(ymin = Lower, ymax = Upper), alpha = 0.2, fill = "green") +
+  labs(title = "Forecast for PRECTOTCORR", x = "Time", y = "Value") +
+  theme_minimal()
+
+# Forecast WS10M
+forecast_WS10M <- data.frame(
+  Time = time(forecast_VP5C$forecast$WS10M$mean),
+  Forecast = forecast_VP5C$forecast$WS10M$mean,
+  Lower = forecast_VP5C$forecast$WS10M$lower[, 2],
+  Upper = forecast_VP5C$forecast$WS10M$upper[, 2]
+)
+
+# Plot forecast WS10M
+ggplot(forecast_WS10M, aes(x = Time)) +
+  geom_line(aes(y = Forecast), color = "red", size = 1) +
+  geom_ribbon(aes(ymin = Lower, ymax = Upper), alpha = 0.2, fill = "red") +
+  labs(title = "Forecast for WS10M", x = "Time", y = "Value") +
+  theme_minimal()
+
+```
+
 
 
 ```{r}
